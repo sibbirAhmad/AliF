@@ -8,6 +8,7 @@ var showUI = function () {
 	$('form#userForm').css('display', 'none');
 	$('div#userInfo').css('display', 'inline');
 	$('h3#login').css('display', 'none');
+	$('video').show();
 	$('span#username').text(global_username);
 }
 
@@ -18,28 +19,30 @@ var showLoginUI = function () {
 	$('form#userForm').css('display', 'inline');
 }
 
-/*** Set up sinchClient ***/
+
+//*** Set up sinchClient ***/
 
 sinchClient = new SinchClient({
 	applicationKey: '4ebc63c3-7cdc-4a17-b909-3e333e678fe1',
-	capabilities: { calling: true },
-	startActiveConnection: true, /* NOTE: This is required if application is to receive calls / instant messages. */
+	capabilities: { calling: true, video: true },
+	supportActiveConnection: true,
 	//Note: For additional loging, please uncomment the three rows below
 	onLogMessage: function (message) {
 		console.log(message);
 	},
 });
 
+sinchClient.startActiveConnection();
 
 /*** Name of session, can be anything. ***/
 
-var sessionName = 'sinchSessionWEB-' + sinchClient.applicationKey;
+var sessionName = 'sinchSessionVIDEO-' + sinchClient.applicationKey;
 
 
 /*** Check for valid session. NOTE: Deactivated by default to allow multiple browser-tabs with different users. ***/
 
 var sessionObj = JSON.parse(localStorage[sessionName] || '{}');
-if (false && sessionObj.userId) {
+if (sessionObj.userId) {
 	sinchClient.start(sessionObj)
 		.then(function () {
 			global_username = sessionObj.userId;
@@ -62,7 +65,6 @@ else {
 
 $('button#createUser').on('click', function (event) {
 	event.preventDefault();
-	loading();
 	$('button#loginUser').attr('disabled', true);
 	$('button#createUser').attr('disabled', true);
 	clearError();
@@ -76,13 +78,7 @@ $('button#createUser').on('click', function (event) {
 		//On success, start the client
 		sinchClient.start(ticket, function () {
 			global_username = signUpObj.username;
-			global_password = signUpObj.password;
-
-			//Saving Coockie
-			setCookie("s_username", global_username, 10);
-			setCookie("s_password", global_password, 10);
 			//On success, show the UI
-			hideLoading();
 			showUI();
 
 			//Store session & manage in some way (optional)
@@ -96,7 +92,6 @@ $('button#createUser').on('click', function (event) {
 
 $('button#loginUser').on('click', function (event) {
 	event.preventDefault();
-	loading();
 	$('button#loginUser').attr('disabled', true);
 	$('button#createUser').attr('disabled', true);
 	clearError();
@@ -108,51 +103,36 @@ $('button#loginUser').on('click', function (event) {
 	//Use Sinch SDK to authenticate a user
 	sinchClient.start(signInObj, function () {
 		global_username = signInObj.username;
-		global_password = signInObj.password;
-
-		//Saving Coockie
-		var user = getCookie("s_username");
-		if (user == "") {
-
-			var r = confirm("Will you save number and passwor?");
-			if (r == true) {
-
-				setCookie("s_username", global_username, 10);
-				setCookie("s_password", global_password, 10);
-
-			}
-		}
-
 		//On success, show the UI
-		hideLoading();
 		showUI();
 
 		//Store session & manage in some way (optional)
 		localStorage[sessionName] = JSON.stringify(sinchClient.getSession());
 	}).fail(handleError);
 });
+
 /*** Create audio elements for progresstone and incoming sound */
 const audioProgress = document.createElement('audio');
 const audioRingTone = document.createElement('audio');
-const audioIncoming = document.createElement('audio');
+const videoIncoming = document.getElementById('videoincoming');
+const videoOutgoing = document.getElementById('videooutgoing');
 
 /*** Define listener for managing calls ***/
-
 var callListeners = {
 	onCallProgressing: function (call) {
 		audioProgress.src = 'style/ringback.wav';
 		audioProgress.loop = true;
 		audioProgress.play();
+		videoOutgoing.srcObject = call.outgoingStream;
 
 		//Report call stats
 		$('div#callLog').append('<div id="stats">Ringing...</div>');
 	},
 	onCallEstablished: function (call) {
-		audioIncoming.srcObject = call.incomingStream;
-		audioIncoming.play();
+		videoOutgoing.srcObject = call.outgoingStream;
+		videoIncoming.srcObject = call.incomingStream;
 		audioProgress.pause();
 		audioRingTone.pause();
-
 		//Report call stats
 		var callDetails = call.getDetails();
 		$('div#callLog').append('<div id="stats">Answered at: ' + (callDetails.establishedTime && new Date(callDetails.establishedTime)) + '</div>');
@@ -160,7 +140,8 @@ var callListeners = {
 	onCallEnded: function (call) {
 		audioProgress.pause();
 		audioRingTone.pause();
-		audioIncoming.srcObject = null;
+		videoIncoming.srcObject = null;
+		videoOutgoing.srcObject = null;
 
 		$('button').removeClass('incall');
 		$('button').removeClass('callwaiting');
@@ -200,6 +181,9 @@ callClient.addEventListener({
 		call = incomingCall;
 		call.addEventListener(callListeners);
 		$('button').addClass('callwaiting');
+
+		//call.answer(); //Use to test auto answer
+		//call.hangup();
 	}
 });
 
@@ -258,9 +242,6 @@ $('button#logOut').on('click', function (event) {
 	event.preventDefault();
 	clearError();
 
-	//Clearing Coockie
-	setCookie("s_username", "", 1);
-	setCookie("s_password", "", 1);
 	//Stop the sinchClient
 	sinchClient.terminate();
 	//Note: sinchClient object is now considered stale. Instantiate new sinchClient to reauthenticate, or reload the page.
@@ -293,9 +274,6 @@ var handleError = function (error) {
 var clearError = function () {
 	$('div.error').hide();
 }
-var loading = function () {
-	$('div.animate-bottom').show();
-}
 
 /** Chrome check for file - This will warn developers of using file: protocol when testing WebRTC **/
 if (location.protocol == 'file:' && navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
@@ -303,52 +281,6 @@ if (location.protocol == 'file:' && navigator.userAgent.toLowerCase().indexOf('c
 }
 
 $('button').prop('disabled', false); //Solve Firefox issue, ensure buttons always clickable after load
-
-
-//---------------- todo : My Function
-function hideLoading() {
-	document.getElementById("loader").style.display = "none";
-	//document.getElementById("myDiv").style.display = "block";
-}
-
-function autoLogin() {
-	loading();
-	$('button#loginUser').attr('disabled', true);
-	$('button#createUser').attr('disabled', true);
-	clearError();
-
-	var signInObj = {};
-	signInObj.username = $('input#username').val();
-	signInObj.password = $('input#password').val();
-
-	//Use Sinch SDK to authenticate a user
-	sinchClient.start(signInObj, function () {
-		global_username = signInObj.username;
-		global_password = signInObj.password;
-
-		//Saving Coockie
-		var user = getCookie("s_username");
-		if (user == "") {
-
-			var r = confirm("Will you save number and passwor?");
-			if (r == true) {
-
-				setCookie("s_username", global_username, 10);
-				setCookie("s_password", global_password, 10);
-
-			}
-		}
-
-		//On success, show the UI
-		hideLoading();
-		showUI();
-
-		//Store session & manage in some way (optional)
-		localStorage[sessionName] = JSON.stringify(sinchClient.getSession());
-	}).fail(handleError);
-}
-
-
 
 
 
