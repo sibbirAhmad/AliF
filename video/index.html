@@ -3,7 +3,7 @@
 <head>
 	<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
 	<meta content="utf-8" http-equiv="encoding">
-	<title>Sinch VIDEO Sample app</title>
+	<title>AliF</title>
 	<link rel="stylesheet" href="style/style.css" />
 	<link href='https://fonts.googleapis.com/css?family=Roboto:400,300' rel='stylesheet' type='text/css'>
 	<link href='https://fonts.googleapis.com/css?family=Roboto+Condensed:300' rel='stylesheet' type='text/css'>
@@ -11,7 +11,7 @@
 	<script src="../sinch.min.js"></script>
 </head>
 
-<body>
+<body onload="checkLogin()">
 	<!--	 <div class="top1">
 		<h1>Video calling</h1>
 	</div>
@@ -31,21 +31,21 @@
 
 		<div class="frame small">
 			<div class="inner loginBox">
-				<h3 id="login">Sign in</h3>
+				<h3 id="login">সাইন ইন</h3>
 				<form id="userForm">
-					<input id="username" placeholder="USERNAME"><br>
+					<input id="username" placeholder="নাম্বার"><br>
 					<input id="password" type="password" placeholder="PASSWORD"><br>
-					<button id="loginUser">Login</button>
-					<button id="createUser">Create</button>
+					<button id="loginUser">লগিন</button>
+					<button id="createUser">নতুন খুলুন</button>
 				</form>
 				<div id="userInfo">
 					<h3><span id="username"></span></h3>
-					<button id="logOut">Logout</button>
+					<button id="logOut">লগ আউট</button>
 				</div>
 			</div>
 
 			<div class="inner takeaways">
-				<h3>Takeaways</h3>
+				<!-- <h3>Takeaways</h3>
 				<ul>
 					<li>Authenticate users and act on success / failures</li>
 					<li>How to create user and login automatically</li>
@@ -54,18 +54,21 @@
 					<li>Wire up the incoming stream + start/stop ringback tone as needed</li>
 					<li>Receiving a video call</li>
 					<li>Ending a video call</li>
-				</ul>
+				</ul> -->
+				<form action="../index.html">
+					<input type="submit" value="অডিও কল" />
+				</form>
 			</div>
 		</div>
 
 		<div class="frame">
-			<h3>Video Call</h3>
+			<h3>আলিফ ভিডিও কমিউনিকেশন</h3>
 			<div id="call">
 				<form id="newCall">
-					<input id="callUserName" placeholder="Username (alice)"><br>
-					<button id="call">Call</button>
-					<button id="hangup">Hangup</button>
-					<button id="answer">Answer</button>
+					<input id="callUserName" placeholder="কাঙ্ক্ষিত নাম্বার লিখুন"><br>
+					<button id="call">কল</button>
+					<button id="hangup">রিজেক্ট</button>
+					<button id="answer">রিসিভ</button>
 
 				</form>
 			</div>
@@ -79,9 +82,69 @@
 			</div>
 		</div>
 	</div>
+	<div id="loader" class="animate-bottom"></div>
+
 
 	<script src="VIDEOsample.js"></script>
 
 </body>
+
+<script>
+	function checkLogin() {
+		document.getElementById("loader").style.display = "none";
+		var user = getCookie("s_username");
+		var password = getCookie("s_password");
+		if (user != "" && password != "") {
+
+			document.getElementById("username").value = user;
+			document.getElementById("password").value = password;
+			autoLogin();
+
+
+		} else {
+			//  user = prompt("Please enter your name:","");
+			//  if (user != "" && user != null) {
+			//      to
+			//    setCookie("username", user, 30);
+			//  }
+
+
+		}
+	}
+	//------  Save  And Get Coocie
+	function setCookie(cname, cvalue, exdays) {
+		var d = new Date();
+		d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
+		var expires = "expires=" + d.toGMTString();
+		document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+	}
+
+	function getCookie(cname) {
+		var name = cname + "=";
+		var decodedCookie = decodeURIComponent(document.cookie);
+		var ca = decodedCookie.split(';');
+		for (var i = 0; i < ca.length; i++) {
+			var c = ca[i];
+			while (c.charAt(0) == ' ') {
+				c = c.substring(1);
+			}
+			if (c.indexOf(name) == 0) {
+				return c.substring(name.length, c.length);
+			}
+		}
+		return "";
+	}
+
+	function toast(message) {
+		var x = document.getElementById("snackbar");
+		document.getElementById("snackbar").innerHTML = message;
+		x.className = "show";
+		setTimeout(function () {
+			x.className = x.className.replace("show", "");
+		}, 3000);
+	}
+
+
+</script>
 
 </html>

@@ -18,6 +18,10 @@ var showUI = function () {
 var showLoginUI = function () {
 	$('form#userForm').css('display', 'inline');
 }
+var loading = function () {
+	$('div.animate-bottom').show();
+}
+
 
 
 //*** Set up sinchClient ***/
@@ -65,6 +69,7 @@ else {
 
 $('button#createUser').on('click', function (event) {
 	event.preventDefault();
+	loading();
 	$('button#loginUser').attr('disabled', true);
 	$('button#createUser').attr('disabled', true);
 	clearError();
@@ -77,8 +82,24 @@ $('button#createUser').on('click', function (event) {
 	sinchClient.newUser(signUpObj, function (ticket) {
 		//On success, start the client
 		sinchClient.start(ticket, function () {
-			global_username = signUpObj.username;
+			global_username = signInObj.username;
+			global_password = signInObj.password;
+
+			//Saving Coockie
+			var user = getCookie("s_username");
+			if (user == "") {
+
+				var r = confirm("Will you save number and passwor?");
+				if (r == true) {
+
+					setCookie("s_username", global_username, 10);
+					setCookie("s_password", global_password, 10);
+
+				}
+			}
+
 			//On success, show the UI
+			hideLoading();
 			showUI();
 
 			//Store session & manage in some way (optional)
@@ -92,6 +113,7 @@ $('button#createUser').on('click', function (event) {
 
 $('button#loginUser').on('click', function (event) {
 	event.preventDefault();
+	loading();
 	$('button#loginUser').attr('disabled', true);
 	$('button#createUser').attr('disabled', true);
 	clearError();
@@ -103,9 +125,24 @@ $('button#loginUser').on('click', function (event) {
 	//Use Sinch SDK to authenticate a user
 	sinchClient.start(signInObj, function () {
 		global_username = signInObj.username;
+		global_password = signInObj.password;
+
+		//Saving Coockie
+		var user = getCookie("s_username");
+		if (user == "") {
+
+			var r = confirm("Will you save number and passwor?");
+			if (r == true) {
+
+				setCookie("s_username", global_username, 10);
+				setCookie("s_password", global_password, 10);
+
+			}
+		}
+
 		//On success, show the UI
 		showUI();
-
+		hideLoading();
 		//Store session & manage in some way (optional)
 		localStorage[sessionName] = JSON.stringify(sinchClient.getSession());
 	}).fail(handleError);
@@ -242,8 +279,11 @@ $('button#logOut').on('click', function (event) {
 	event.preventDefault();
 	clearError();
 
+	//Clearing Coockie
+	setCookie("s_username", "", 1);
+	setCookie("s_password", "", 1);
 	//Stop the sinchClient
-	sinchClient.terminate();
+	//sinchClient.terminate();
 	//Note: sinchClient object is now considered stale. Instantiate new sinchClient to reauthenticate, or reload the page.
 
 	//Remember to destroy / unset the session info you may have stored
@@ -266,7 +306,7 @@ var handleError = function (error) {
 	$('button#loginUser').prop('disabled', false);
 
 	//Show error
-	$('div.error').text(error.message);
+	$('div.error').text("Message : " + error.message);
 	$('div.error').show();
 }
 
@@ -283,4 +323,56 @@ if (location.protocol == 'file:' && navigator.userAgent.toLowerCase().indexOf('c
 $('button').prop('disabled', false); //Solve Firefox issue, ensure buttons always clickable after load
 
 
+//---------------- todo : My Function
+function hideLoading() {
+	document.getElementById("loader").style.display = "none";
+	//document.getElementById("myDiv").style.display = "block";
+}
+
+function autoLogin() {
+	loading();
+	error.clearError();
+	//sinchClient.terminate();
+	delete localStorage[sessionName];
+	$('button#loginUser').attr('disabled', true);
+	$('button#createUser').attr('disabled', true);
+	clearError();
+
+	var signInObj = {};
+	signInObj.username = $('input#username').val();
+	signInObj.password = $('input#password').val();
+
+	//Use Sinch SDK to authenticate a user
+	sinchClient.start(signInObj, function () {
+		global_username = signInObj.username;
+		global_password = signInObj.password;
+
+		//Saving Coockie
+		var user = getCookie("s_username");
+		if (user == "") {
+
+			var r = confirm("Will you save number and passwor?");
+			if (r == true) {
+
+				setCookie("s_username", global_username, 10);
+				setCookie("s_password", global_password, 10);
+
+			}
+		}
+
+		//On success, show the UI
+		hideLoading();
+		showUI();
+
+		//Store session & manage in some way (optional)
+		localStorage[sessionName] = JSON.stringify(sinchClient.getSession());
+	}).fail(alreadyDone);
+}
+var alreadyDone = function (error) {
+	//Enable buttons
+
+	clearError();
+	hideLoading();
+	showUI();
+}
 
